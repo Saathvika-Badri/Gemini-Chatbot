@@ -1,10 +1,10 @@
 import streamlit as st
-from gemini_client import get_gemini_response   
+from gemini_client import get_gemini_response
 
 # Streamlit page config
 st.set_page_config(page_title="Gemini Chatbot")
 
-# Initialize memory in session_state
+# Initialize memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -15,28 +15,33 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# Input box
+# User input box
 user_input = st.chat_input("Type your message...")
 
 if user_input:
-    # Save user message
+    # 1️⃣ Immediately display and save user's message
     st.session_state.messages.append(
         {"role": "user", "content": user_input}
     )
+    
+    # 2️⃣ Re-render immediately so the message appears without delay
+    st.rerun()
 
-    # Build conversation history to send to Gemini
-    full_conversation = "\n".join(
-        f"{m['role']}: {m['content']}" for m in st.session_state.messages
-    )
+# Process the last user message
+if st.session_state.messages:
+    last_msg = st.session_state.messages[-1]
 
-    # Get response from Gemini
-    bot_reply = get_gemini_response(full_conversation)
+    # If last message was from the user → generate reply
+    if last_msg["role"] == "user":
+        full_conversation = "\n".join(
+            f"{m['role']}: {m['content']}" for m in st.session_state.messages
+        )
 
-    # Save assistant reply
-    st.session_state.messages.append(
-        {"role": "assistant", "content": bot_reply}
-    )
+        bot_reply = get_gemini_response(full_conversation)
 
-    # Display the latest assistant response
-    with st.chat_message("assistant"):
-        st.write(bot_reply)
+        # Save bot reply
+        st.session_state.messages.append(
+            {"role": "assistant", "content": bot_reply}
+        )
+
+        st.rerun()
