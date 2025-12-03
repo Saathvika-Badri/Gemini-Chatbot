@@ -1,47 +1,53 @@
 import streamlit as st
-from gemini_client import get_gemini_response
 
-# Streamlit page config
-st.set_page_config(page_title="Gemini Chatbot")
+# Import only the objects you created (client, config) WITHOUT running the script
+from tool_search import client, config
+from google.genai import types
 
-# Initialize memory
+st.set_page_config(page_title="Gemini Chatbot", page_icon="💬")
+
+st.title("💬 Gemini Chatbot")
+
+# Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-st.title("💬 Gemini Powered Chatbot")
-
-# Display previous conversation
+# Display old messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-# User input box
-user_input = st.chat_input("Type your message...")
+
+def run_query(query: str) -> str:
+    """Call Gemini using your Google Search Tool config."""
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=query,
+        config=config
+    )
+    return response.text
+
+
+# Chat input
+user_input = st.chat_input("Ask anything...")
 
 if user_input:
-    # 1️⃣ Immediately display and save user's message
-    st.session_state.messages.append(
-        {"role": "user", "content": user_input}
-    )
-    
-    # 2️⃣ Re-render immediately so the message appears without delay
-    st.rerun()
+    # Save and display user message
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.write(user_input)
 
-# Process the last user message
-if st.session_state.messages:
-    last_msg = st.session_state.messages[-1]
+    # Respond
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        full_text = ""
 
-    # If last message was from the user → generate reply
-    if last_msg["role"] == "user":
-        full_conversation = "\n".join(
-            f"{m['role']}: {m['content']}" for m in st.session_state.messages
-        )
+        reply = run_query(user_input)
 
-        bot_reply = get_gemini_response(full_conversation)
+        # Streaming effect
+        for word in reply.split():
+            full_text += word + " "
+            placeholder.write(full_text)
 
-        # Save bot reply
-        st.session_state.messages.append(
-            {"role": "assistant", "content": bot_reply}
-        )
-
-        st.rerun()
+        # Save reply
+        st.session_state.messages.append({"role": "assistant", "content": reply})
