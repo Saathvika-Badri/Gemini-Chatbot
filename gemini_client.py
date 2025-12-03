@@ -1,24 +1,28 @@
-import google.generativeai as genai
-import os
-from dotenv import load_dotenv
+from tool_search import response  # Import the response from your existing tool_search
 
-load_dotenv()
-genai.configure(api_key=os.getenv("Gemini_api_key"))
+def get_gemini_response(user_input):
+    """
+    Currently, your tool_search.py generates a static response.
+    We'll modify it to accept dynamic input.
+    """
+    from google import genai
+    from google.genai import types
+    import os
 
-# Enable Google Search Grounding
-model = genai.GenerativeModel(
-    model_name="models/gemini-2.5-flash",
-    tools=[{
-        "google_search": {}
-    }]
-)
+    client = genai.Client()
 
-def get_gemini_response(prompt):
-    response = model.generate_content(
-        prompt,
-        # Tell Gemini you WANT grounding
-        grounding_config={
-            "sources": ["google_search"]
-        }
+    search_tool = types.Tool(
+        google_search=types.GoogleSearch()
     )
-    return response.text
+
+    config = types.GenerateContentConfig(
+        tools=[search_tool]
+    )
+
+    resp = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=user_input,
+        config=config
+    )
+
+    return resp.text
